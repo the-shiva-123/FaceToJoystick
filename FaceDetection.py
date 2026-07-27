@@ -10,8 +10,8 @@ lk_params = {
     'minEigThreshold': 1e-4  # Minimum eigenvalue threshold
 }
 
-# Load Haar Cascade classifier for face detection
-face_cascade = cv2.CascadeClassifier(f'{cv2.data.haarcascades}haarcascade_frontalface_default.xml')
+# Load Haar Cascade classifier for face detection dynamically from opencv data path
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 # Enhanced preprocessing objects
 clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))  # Increased clip limit for better contrast
@@ -19,8 +19,8 @@ bilateral_filter_d = 5  # Diameter for bilateral filter
 bilateral_sigma_color = 80  # Color space standard deviation
 bilateral_sigma_space = 80  # Coordinate space standard deviation
 
-# Load a pre-trained deep learning model for face detection
-net = cv2.dnn.readNetFromCaffe('deploy.prototxt', 'res10_300x300_ssd_iter_140000.caffemodel')
+# Load a pre-trained deep learning model for face detection (Updated to universal readNet)
+net = cv2.dnn.readNet('deploy.prototxt', 'res10_300x300_ssd_iter_140000.caffemodel')
 
 # Variables to store information about the previous frame and detected faces
 prev_gray = None  # Previous frame in grayscale
@@ -184,7 +184,7 @@ def detect_face(frame):
     good_new, good_old = calculate_optical_flow(gray_frame)
     
     # If tracking fails or quality is poor, fall back to detection
-    if len(good_new) < len(prev_points) * 0.5:  # Less than 50% points tracked successfully
+    if len(good_new) < len(prev_points) * 0.3:  # Less than 30% points tracked successfully
         print("Tracking quality degraded, falling back to detection")
         return detect_faces_control(frame, gray_frame)
 
