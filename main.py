@@ -1,8 +1,10 @@
 import cv2
 import os
 import sys
+import math
 import vgamepad as vg
-from FaceDetection import detect_face, prev_gray, prev_points, previous_faces
+import FaceDetection
+from FaceDetection import detect_face, previous_faces
 import JoystickControl
 import numpy as np
 from helpers import process_frame
@@ -10,6 +12,33 @@ import variables
 
 # Initialize gamepad
 gamepad = vg.VX360Gamepad()
+
+
+def calculate_head_roll(points):
+    """Calculates the head tilt angle (roll) in degrees from tracked points."""
+    if points is None or len(points) < 2:
+        return 0.0
+
+    # Reshape points array to (N, 2)
+    pts = points.reshape(-1, 2)
+    center_x = np.mean(pts[:, 0])
+
+    # Split tracking points into left and right clusters relative to face center
+    left_pts = pts[pts[:, 0] < center_x]
+    right_pts = pts[pts[:, 0] >= center_x]
+
+    if len(left_pts) == 0 or len(right_pts) == 0:
+        return 0.0
+
+    # Find center mass of left and right clusters
+    left_center = np.mean(left_pts, axis=0)
+    right_center = np.mean(right_pts, axis=0)
+
+    # Calculate angle in degrees
+    dx = right_center[0] - left_center[0]
+    dy = right_center[1] - left_center[1]
+
+    return math.degrees(math.atan2(dy, dx))
 
 
 def main():
@@ -34,6 +63,22 @@ def main():
 
         # Process frame
         frame = process_frame(frame)
+
+        # Calculate Head Roll angle using tracked points from FaceDetection module
+        roll_angle = calculate_head_roll(FaceDetection.prev_points)
+
+        # Trigger LB/RB buttons based on head tilt angle
+        if roll_angle > 10:
+            gamepad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+            gamepad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+        elif roll_angle < -10:
+            gamepad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+            gamepad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+        else:
+            gamepad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_LEFT_SHOULDER)
+            gamepad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_RIGHT_SHOULDER)
+
+        gamepad.update()
 
         # Display frame
         cv2.imshow("FaceToJoystick", frame)

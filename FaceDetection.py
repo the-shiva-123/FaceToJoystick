@@ -1,5 +1,32 @@
 import cv2
 import numpy as np
+import math
+
+def calculate_head_roll(points):
+    """Calculates the head tilt angle in degrees from tracked points."""
+    if points is None or len(points) < 2:
+        return 0.0
+
+    # Get the average left-side points and right-side points
+    pts = points.reshape(-1, 2)
+    center_x = np.mean(pts[:, 0])
+
+    left_pts = pts[pts[:, 0] < center_x]
+    right_pts = pts[pts[:, 0] >= center_x]
+
+    if len(left_pts) == 0 or len(right_pts) == 0:
+        return 0.0
+
+    # Average position of left and right clusters
+    left_center = np.mean(left_pts, axis=0)
+    right_center = np.mean(right_pts, axis=0)
+
+    # Calculate angle in degrees
+    dx = right_center[0] - left_center[0]
+    dy = right_center[1] - left_center[1]
+    
+    angle = math.degrees(math.atan2(dy, dx))
+    return angle
 
 # Improved Parameters for Lucas-Kanade Optical Flow for better stability
 lk_params = {
